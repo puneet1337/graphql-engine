@@ -59,10 +59,7 @@ class TestGraphQLInsert:
 class TestGraphQLInsertIdentityColumn:
 
     @pytest.fixture(autouse=True)
-    def transact(self, pg_version, hge_ctx):
-        if pg_version < 10:
-            pytest.skip("Identity columns are not supported in Postgres version < 10")
-
+    def transact(self, hge_ctx):
         setup_q = {
             'type': 'bulk',
             'args': [
@@ -230,7 +227,7 @@ class TestGraphqlInsertPermission:
         check_query_admin_secret(hge_ctx, self.dir() + "/user_with_no_backend_privilege.yaml")
 
     def test_backend_user_no_admin_secret_fail(self, hge_ctx):
-        if hge_ctx.hge_key and (hge_ctx.hge_jwt_key or hge_ctx.hge_webhook):
+        if hge_ctx.hge_key and (hge_ctx.hge_jwt_key or hge_ctx.webhook):
             check_query_f(hge_ctx, self.dir() + "/backend_user_no_admin_secret_fail.yaml")
         else:
             pytest.skip("authorization not configured, skipping the test")
@@ -570,12 +567,6 @@ class TestGraphqlDeleteBasic:
     def test_author_returning_empty_articles(self, hge_ctx, transport):
         check_query_f(hge_ctx, self.dir() + "/author_returning_empty_articles.yaml", transport)
 
-    def test_article_by_pk(self, hge_ctx, transport):
-        check_query_f(hge_ctx, self.dir() + "/article_by_pk.yaml", transport)
-
-    def test_article_by_pk_null(self, hge_ctx, transport):
-        check_query_f(hge_ctx, self.dir() + "/article_by_pk_null.yaml", transport)
-
     @classmethod
     def dir(cls):
         return "queries/graphql_mutation/delete/basic"
@@ -597,15 +588,8 @@ class TestGraphqlDeleteBasicMSSQL:
     def test_author_returning_empty_articles(self, hge_ctx, transport):
         check_query_f(hge_ctx, self.dir() + "/author_returning_empty_articles_mssql.yaml", transport)
 
-    def test_article_by_pk(self, hge_ctx, transport):
-        check_query_f(hge_ctx, self.dir() + "/article_by_pk.yaml", transport)
-
-    def test_article_by_pk_null(self, hge_ctx, transport):
-        check_query_f(hge_ctx, self.dir() + "/article_by_pk_null.yaml", transport)
-
     def test_test_types_delete(self, hge_ctx, transport):
         check_query_f(hge_ctx, self.dir() + "/test_types_mssql.yaml", transport)
-
 
     @classmethod
     def dir(cls):

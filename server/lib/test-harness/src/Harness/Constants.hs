@@ -9,6 +9,7 @@ module Harness.Constants
     postgresHost,
     postgresPort,
     postgresqlConnectionString,
+    postgresqlMetadataConnectionString,
     postgresLivenessCheckAttempts,
     postgresLivenessCheckIntervalSeconds,
     mysqlLivenessCheckAttempts,
@@ -34,6 +35,7 @@ module Harness.Constants
     cockroachDb,
     serveOptions,
     dataConnectorDb,
+    sqliteSchemaName,
     maxRetriesRateLimitExceeded,
   )
 where
@@ -44,11 +46,13 @@ import Data.HashSet qualified as Set
 import Data.Word (Word16)
 import Database.MySQL.Simple qualified as Mysql
 import Database.PG.Query qualified as PG
+import Harness.TestEnvironment (BackendSettings (..), TestEnvironment (..))
 import Hasura.Backends.Postgres.Connection.MonadTx (ExtensionsSchema (..))
 import Hasura.GraphQL.Execute.Subscription.Options qualified as ES
 import Hasura.GraphQL.Schema.Options qualified as Options
 import Hasura.Logging qualified as L
 import Hasura.Prelude
+import Hasura.RQL.Types.Metadata (emptyMetadataDefaults)
 import Hasura.Server.Cors (CorsConfig (CCAllowAll))
 import Hasura.Server.Init
   ( API (CONFIG, DEVELOPER, GRAPHQL, METADATA),
@@ -69,6 +73,40 @@ import Refined (refineTH)
 
 -------------------------------------------------------------------------------
 
+-- * Postgres metadata DB
+
+-- To allow us to test different Postgres flavours,
+-- we have separate connection details for the metadata DB
+-- (which should always be Postgres) and other Postgres (which
+-- might actually be Yugabyte, etc)
+postgresMetadataPassword :: String
+postgresMetadataPassword = "hasura"
+
+postgresMetadataUser :: String
+postgresMetadataUser = "hasura"
+
+postgresMetadataDb :: String
+postgresMetadataDb = "hasura_metadata"
+
+postgresMetadataHost :: String
+postgresMetadataHost = "127.0.0.1"
+
+postgresMetadataPort :: Word16
+postgresMetadataPort = 65002
+
+postgresqlMetadataConnectionString :: String
+postgresqlMetadataConnectionString =
+  "postgres://"
+    ++ postgresMetadataUser
+    ++ ":"
+    ++ postgresMetadataPassword
+    ++ "@"
+    ++ postgresMetadataHost
+    ++ ":"
+    ++ show postgresMetadataPort
+    ++ "/"
+    ++ postgresMetadataDb
+
 -- * Postgres
 
 postgresPassword :: String
@@ -83,11 +121,17 @@ postgresDb = "hasura"
 postgresHost :: String
 postgresHost = "127.0.0.1"
 
-postgresPort :: Word16
-postgresPort = 65002
+-- | the port used for Postgres, unless it is overwritten by
+-- the `HASURA_TEST_POSTGRES_PORT` env var
+defaultPostgresPort :: Word16
+defaultPostgresPort = 65002
 
-postgresqlConnectionString :: String
-postgresqlConnectionString =
+postgresPort :: BackendSettings -> Word16
+postgresPort =
+  fromMaybe defaultPostgresPort . postgresSourcePort
+
+postgresqlConnectionString :: TestEnvironment -> String
+postgresqlConnectionString testEnv =
   "postgres://"
     ++ postgresUser
     ++ ":"
@@ -95,7 +139,7 @@ postgresqlConnectionString =
     ++ "@"
     ++ postgresHost
     ++ ":"
-    ++ show postgresPort
+    ++ show (postgresPort (backendSettings testEnv))
     ++ "/"
     ++ postgresDb
 
@@ -158,7 +202,10 @@ cockroachConnectionString =
 -- * DataConnector
 
 dataConnectorDb :: String
-dataConnectorDb = "data-connector"
+dataConnectorDb = "hasura"
+
+sqliteSchemaName :: Text
+sqliteSchemaName = "main"
 
 -- * Liveness
 
@@ -252,7 +299,7 @@ serveOptions =
       soConsoleAssetsDir = Just "../console/static/dist",
       soConsoleSentryDsn = Nothing,
       soEnableTelemetry = False,
-      soStringifyNum = Options.StringifyNumbers,
+      soStringifyNum = Options.Don'tStringifyNumbers,
       soDangerousBooleanCollapse = Options.Don'tDangerouslyCollapseBooleans,
       soEnabledAPIs = testSuiteEnabledApis,
       soLiveQueryOpts = ES.mkSubscriptionsOptions Nothing Nothing,
@@ -280,7 +327,8 @@ serveOptions =
       soReadOnlyMode = ReadOnlyModeDisabled,
       soEnableMetadataQueryLogging = MetadataQueryLoggingDisabled,
       soDefaultNamingConvention = Nothing,
-      soExtensionsSchema = ExtensionsSchema "public"
+      soExtensionsSchema = ExtensionsSchema "public",
+      soMetadataDefaults = emptyMetadataDefaults
     }
 
 -- | What log level should be used by the engine; this is not exported, and

@@ -16,11 +16,13 @@ import Test.Hspec
 spec :: SpecWith TestEnvironment
 spec = do
   ignoreSubject do
-    it "Postgres" $ shouldReturn Postgres.livenessCheck ()
+    it "Postgres metadata DB" $ shouldReturn Postgres.metadataLivenessCheck ()
     it "MySQL" $ shouldReturn Mysql.livenessCheck ()
     it "SQLServer" $ shouldReturn Sqlserver.livenessCheck ()
     it "Citus" $ shouldReturn Citus.livenessCheck ()
     it "Cockroach" $ shouldReturn Cockroach.livenessCheck ()
+  it "Postgres" $ \testEnvironment ->
+    shouldReturn (Postgres.livenessCheck testEnvironment) ()
   it
     "graphql-engine"
     \TestEnvironment {server} ->

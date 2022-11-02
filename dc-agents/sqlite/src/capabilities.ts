@@ -10,6 +10,9 @@ export const capabilitiesResponse: CapabilitiesResponse = {
       supports_foreign_keys: true,
       column_nullability: "nullable_and_non_nullable",
     },
+    scalar_types: {
+      DateTime: {}
+    },
     queries: {},
     relationships: {},
     comparisons: {

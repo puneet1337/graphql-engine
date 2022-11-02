@@ -33,7 +33,7 @@ spec =
           (Fixture.fixture $ Fixture.Backend Fixture.Postgres)
             { Fixture.setupTeardown = \(testEnvironment, _) ->
                 [ Postgres.setupTablesAction schema testEnvironment,
-                  setupPostgres,
+                  setupPostgres testEnvironment,
                   setupMetadata Fixture.Postgres testEnvironment
                 ]
             },
@@ -42,12 +42,7 @@ spec =
                 [ Cockroach.setupTablesAction schema testEnvironment,
                   setupCockroach,
                   setupMetadata Fixture.Cockroach testEnvironment
-                ],
-              Fixture.customOptions =
-                Just $
-                  Fixture.defaultOptions
-                    { Fixture.stringifyNumbers = True
-                    }
+                ]
             }
         ]
     )
@@ -127,17 +122,19 @@ setupMysql =
 --------------------------------------------------------------------------------
 -- Postgres setup
 
-setupPostgres :: Fixture.SetupAction
-setupPostgres =
+setupPostgres :: TestEnvironment -> Fixture.SetupAction
+setupPostgres testEnvironment =
   Fixture.SetupAction
     { Fixture.setupAction =
         Postgres.run_
+          testEnvironment
           [sql|
             CREATE OR REPLACE VIEW author_view
             AS SELECT * FROM author
           |],
       Fixture.teardownAction = \_ ->
         Postgres.run_
+          testEnvironment
           [sql|
             DROP VIEW IF EXISTS author_view
           |]
@@ -174,7 +171,7 @@ setupMetadata backend testEnvironment =
           [yaml|
             type: *track
             args:
-              source: *label
+              source: *source
               table:
                 name: author_view
                 schema: hasura
@@ -185,7 +182,7 @@ setupMetadata backend testEnvironment =
           [yaml|
             type: *untrack
             args:
-              source: *label
+              source: *source
               table:
                 name: author_view
                 schema: hasura
@@ -194,6 +191,9 @@ setupMetadata backend testEnvironment =
   where
     label :: String
     label = Fixture.defaultBackendTypeString backend
+
+    source :: String
+    source = Fixture.defaultSource backend
 
     track :: String
     track = label <> "_track_table"

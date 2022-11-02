@@ -54,6 +54,8 @@ defaultBackendCapabilities = \case
         data_schema:
           supports_primary_keys: true
           supports_foreign_keys: true
+        scalar_types:
+          DateTime: {}
         queries: {}
         relationships: {}
         comparisons:
@@ -70,26 +72,29 @@ defaultBackendCapabilities = \case
           supports_primary_keys: true
           supports_foreign_keys: true
         queries: {}
-        graphql_schema: |-
-          scalar DateTime
-
-          input DateTimeComparisons {in_year: Int
-            same_day_as: DateTime
-          }
         relationships: {}
         comparisons:
           subquery:
             supports_relations: true
         scalar_types:
           DateTime:
-            comparison_type: DateTimeComparisons
+            comparison_operators:
+              same_day_as: DateTime
+              in_year: Int
+            aggregate_functions:
+              max: DateTime
+              min: DateTime
+          string:
+            aggregate_functions:
+              longest: string
+              shortest: string
     |]
   _ -> Nothing
 
 -- | The default hasura metadata backend type used for a given backend in this test suite project.
 defaultBackendTypeString :: BackendType -> String
 defaultBackendTypeString = \case
-  Postgres -> "postgres"
+  Postgres -> "pg"
   MySQL -> "mysql"
   SQLServer -> "mssql"
   BigQuery -> "bigquery"

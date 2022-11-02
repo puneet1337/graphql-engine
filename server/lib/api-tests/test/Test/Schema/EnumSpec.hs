@@ -30,9 +30,9 @@ spec =
             { Fixture.setupTeardown = \(testEnvironment, _) ->
                 [ Fixture.SetupAction
                     { Fixture.setupAction =
-                        Postgres.run_ setup,
+                        Postgres.run_ testEnvironment setup,
                       Fixture.teardownAction = \_ ->
-                        Postgres.run_ teardown
+                        Postgres.run_ testEnvironment teardown
                     },
                   Postgres.setupTablesAction schema testEnvironment
                 ]
@@ -46,12 +46,7 @@ spec =
                         Cockroach.run_ teardown
                     },
                   Cockroach.setupTablesAction schema testEnvironment
-                ],
-              Fixture.customOptions =
-                Just $
-                  Fixture.defaultOptions
-                    { Fixture.stringifyNumbers = True
-                    }
+                ]
             },
           (Fixture.fixture $ Fixture.Backend Fixture.Citus)
             { Fixture.setupTeardown = \(testEnvironment, _) ->
